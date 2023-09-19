@@ -1,0 +1,16 @@
+[package]
+name = "pathio"
+version = "0.0.1"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+authors = ["Dominik Kaspar"]
+repository = "https://github.com/bytestring-net/pathio"
+keywords = ["path", "unix", "directory", "hierarchy", "sandbox"]
+categories = ["data-structures", "database", "filesystem", "simulation"]
+description = "Data type for storing generic data on a virtual path tree hierarchy. The data is stored in memory, this is not OS file system abstraction, but immitation"
+readme = "README.md"
+
+[dependencies]
+ahash = "0.8.3"
+bevy_utils = "0.11.2"
+colored = "2.0.4"

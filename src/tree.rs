@@ -433,7 +433,7 @@ impl <T> Directory<T> {
 
     /// Generate overview of the inner tree and write the mapped output to the given string with data formatted to a certain level depth
     pub(super) fn cascade_list(&self, mut string: String, level: u32) -> String {
-        for (name, file) in &self.file {
+        for (name, _file) in &self.file {
             let mut text = String::from("\n  ");
             for _ in 0..level { text += "|    " }
             text += "|-> ";

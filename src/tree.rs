@@ -44,6 +44,7 @@ pub(crate) fn split_last(string: &str, delimiter: &str) -> (String, String) {
 // ===========================================================
 // === PATHTREE ===
 
+/// [`PathTree`] is a special type immitating **UNIX** file system for storing any generic type `<T>`
 #[derive(Default, Clone, Debug, PartialEq)]
 pub struct PathTree<T> {
     directory: Directory<T>,
@@ -156,8 +157,8 @@ impl <T> PathTree<T> {
     }
 
     /// Generate overview of the inner tree in a stringified form
-    pub fn generate_map(&self) -> String {
-        self.directory.generate_map()
+    pub fn list(&self) -> String {
+        self.directory.list()
     }
 
     /// Returns cached name
@@ -180,6 +181,7 @@ impl <T> PathTree<T> {
 // ===========================================================
 // === DIRECTORY ===
 
+/// [`Directory`] is a special type representing directory in [`PathTree`]
 #[derive(Default, Clone, Debug, PartialEq)]
 pub struct Directory<T> {
     //# SYNC =======
@@ -405,12 +407,12 @@ impl <T> Directory<T> {
     }
 
     /// Generates overview of the inner tree in a stringified form
-    pub fn generate_map(&self) -> String {
+    pub fn list(&self) -> String {
         let text = String::new();
         format!(
             "> {}{}",
             self.name.purple().bold().underline(),
-            self.cascade_generate_map(text, 0)
+            self.cascade_list(text, 0)
         )
     }
 
@@ -430,7 +432,7 @@ impl <T> Directory<T> {
     }
 
     /// Generate overview of the inner tree and write the mapped output to the given string with data formatted to a certain level depth
-    pub(super) fn cascade_generate_map(&self, mut string: String, level: u32) -> String {
+    pub(super) fn cascade_list(&self, mut string: String, level: u32) -> String {
         for (name, file) in &self.file {
             let mut text = String::from("\n  ");
             for _ in 0..level { text += "|    " }
@@ -442,7 +444,7 @@ impl <T> Directory<T> {
             for _ in 0..level { text += "|    " }
             text += "|-> ";
             string = format!("{}{}{}", string, text.black(), name.bold().yellow());
-            string = directory.cascade_generate_map(string, level + 1);
+            string = directory.cascade_list(string, level + 1);
         }
         string
     }

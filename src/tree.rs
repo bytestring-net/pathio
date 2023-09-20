@@ -190,8 +190,8 @@ pub struct Directory<T> {
     depth: f32,
 
     //# DATA =======
-    file: HashMap<String, T>,
-    directory: HashMap<String, Directory<T>>,
+    pub file: HashMap<String, T>,
+    pub directory: HashMap<String, Directory<T>>,
 }
 impl <T> Directory<T> {
     /// Create new unassigned directory

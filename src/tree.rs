@@ -47,7 +47,7 @@ pub(crate) fn split_last(string: &str, delimiter: &str) -> (String, String) {
 /// [`PathTree`] is a special type immitating **UNIX** file system for storing any generic type `<T>`
 #[derive(Default, Clone, Debug, PartialEq)]
 pub struct PathTree<T> {
-    directory: Directory<T>,
+    pub directory: Directory<T>,
 }
 impl <T> PathTree<T> {
     /// Creates a new [`PathTree`] with the given name

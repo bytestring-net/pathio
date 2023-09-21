@@ -16,7 +16,7 @@ Crate adding *`PathTree`*, a special type immitating **UNIX** file system for st
 It is created by daisy chaining *HashMaps*. It splits data into directories, which can store `<T>` or nest subdirectories.
 
 ```rust
-use pathio::PathTree;
+use pathio::prelude::*;
 
 let mut tree: PathTree<String> = PathTree::new("FileSystem");
 

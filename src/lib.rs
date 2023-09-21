@@ -16,7 +16,7 @@
 //! It is created by daisy chaining *HashMaps*. It splits data into directories, which can store `<T>` or nest subdirectories.
 //! 
 //! ```rust
-//! use pathio::PathTree;
+//! use pathio::prelude::*;
 //! 
 //! let mut tree: PathTree<String> = PathTree::new("FileSystem");
 //! 
@@ -50,3 +50,10 @@
 
 mod tree;
 pub use tree::*;
+
+pub mod prelude {
+    pub use crate::PathioHierarchy;
+    pub use crate::PathioFile;
+    pub use crate::PathioFileStorage;
+    pub use crate::PathTree;
+}

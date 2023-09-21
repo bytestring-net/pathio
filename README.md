@@ -9,16 +9,16 @@
 
 #
 
-Crate adding *`PathTree`*, a special type immitating **UNIX** file system for storing any generic type `<T>`.
+Crate adding *`PathTreeMulti`*, a special type immitating **UNIX** file system for storing any generic type `<T>`.
 
 ## === Description ===
 
 It is created by daisy chaining *HashMaps*. It splits data into directories, which can store `<T>` or nest subdirectories.
 
 ```rust
-use pathio::PathTree;
+use pathio::PathTreeMulti;
 
-let mut tree: PathTree<String> = PathTree::new("FileSystem");
+let mut tree: PathTreeMulti<String> = PathTreeMulti::new("FileSystem");
 
 tree.create_directory("New_Folder").unwrap();
 tree.create_directory("New_Folder/Strings").unwrap();

@@ -47,7 +47,7 @@ fn split_last(string: &str, delimiter: &str) -> (String, String) {
 }
 
 
-trait Hierarchy<D> {
+pub trait Hierarchy<D> {
     /// Adds subdirectory directly to this directory
     fn add_directory(&mut self, directory: D, name: impl Borrow<str>) -> Result<(), PathioError>;
 
@@ -90,7 +90,7 @@ trait Hierarchy<D> {
     /// Returns cached name
     fn get_path(&self) -> &String;
 }
-trait File<T> {
+pub trait File<T> {
     /// Adds file directly to this directory and return existing one
     fn add_file(&mut self, file: T) -> Option<T>;
 
@@ -115,7 +115,7 @@ trait File<T> {
     /// Borrow file from self or any subdirectory
     fn borrow_file_mut(&mut self, path: impl Borrow<str>) -> Result<Option<&mut T>, PathioError>;
 }
-trait FileStorage<T> {
+pub trait FileStorage<T> {
     /// Adds file directly to this directory
     fn add_file(&mut self, file: T, name: impl Borrow<str>) -> Result<(), PathioError>;
 

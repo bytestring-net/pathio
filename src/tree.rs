@@ -6,6 +6,7 @@ use std::borrow::Borrow;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, ser::{Serialize, SerializeStruct, Serializer}};
 
+#[cfg(feature = "bevy")]
 use bevy::prelude::Component;
 
 
@@ -168,7 +169,7 @@ pub type Directory<T> = DirectoryMulti<T>;
 #[cfg_attr(feature = "deku", derive(DekuRead, DekuWrite))]
 #[cfg_attr(feature = "serde", derive(Deserialize))]
 #[cfg_attr(feature = "bevy", derive(Component))]
-#[derive(Default, Clone, Debug, PartialEq, Component)]
+#[derive(Default, Clone, Debug, PartialEq)]
 pub struct PathTreeSingle<T> {
     pub directory: DirectorySingle<T>,
 }
@@ -300,6 +301,7 @@ impl <T:Serialize> Serialize for PathTreeSingle<T> {
 /// The path is also used to specify the name of the file, so the target directory is the second one from the end in cases where you work with files
 #[cfg_attr(feature = "deku", derive(DekuRead, DekuWrite))]
 #[cfg_attr(feature = "serde", derive(Deserialize))]
+#[cfg_attr(feature = "bevy", derive(Component))]
 #[derive(Default, Clone, Debug, PartialEq)]
 pub struct PathTreeMulti<T> {
     pub directory: DirectoryMulti<T>,
@@ -430,6 +432,7 @@ impl <T:Serialize> Serialize for PathTreeMulti<T> {
 /// [`DirectorySingle`] is a special type representing directory in [`PathTreeSingle`]
 #[cfg_attr(feature = "deku", derive(DekuRead, DekuWrite))]
 #[cfg_attr(feature = "serde", derive(Deserialize))]
+#[cfg_attr(feature = "bevy", derive(Component))]
 #[derive(Default, Clone, Debug, PartialEq)]
 pub struct DirectorySingle<T> {
     //# SYNC =======
@@ -691,6 +694,7 @@ impl <T:Serialize> Serialize for DirectorySingle<T> {
 /// [`DirectoryMulti`] is a special type representing directory in [`PathTreeMulti`]
 #[cfg_attr(feature = "deku", derive(DekuRead, DekuWrite))]
 #[cfg_attr(feature = "serde", derive(Deserialize))]
+#[cfg_attr(feature = "bevy", derive(Component))]
 #[derive(Default, Clone, Debug, PartialEq)]
 pub struct DirectoryMulti<T> {
     //# SYNC =======

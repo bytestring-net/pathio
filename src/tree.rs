@@ -166,7 +166,6 @@ pub type Directory<T> = DirectoryMulti<T>;
 /// [`PathTreeSingle`] can store single file `<T>` on the nested [`DirectorySingle`]
 /// 
 /// The path always ends with the target directory.
-#[cfg_attr(feature = "deku", derive(DekuRead, DekuWrite))]
 #[cfg_attr(feature = "serde", derive(Deserialize))]
 #[cfg_attr(feature = "bevy", derive(Component))]
 #[derive(Default, Clone, Debug, PartialEq)]
@@ -299,7 +298,6 @@ impl <T:Serialize> Serialize for PathTreeSingle<T> {
 /// [`PathTreeMulti`] can store multiple files `<T>` on the nested [`DirectoryMulti`]
 /// 
 /// The path is also used to specify the name of the file, so the target directory is the second one from the end in cases where you work with files
-#[cfg_attr(feature = "deku", derive(DekuRead, DekuWrite))]
 #[cfg_attr(feature = "serde", derive(Deserialize))]
 #[cfg_attr(feature = "bevy", derive(Component))]
 #[derive(Default, Clone, Debug, PartialEq)]
@@ -430,7 +428,6 @@ impl <T:Serialize> Serialize for PathTreeMulti<T> {
 // === DIRECTORY ===
 
 /// [`DirectorySingle`] is a special type representing directory in [`PathTreeSingle`]
-#[cfg_attr(feature = "deku", derive(DekuRead, DekuWrite))]
 #[cfg_attr(feature = "serde", derive(Deserialize))]
 #[cfg_attr(feature = "bevy", derive(Component))]
 #[derive(Default, Clone, Debug, PartialEq)]
@@ -692,7 +689,6 @@ impl <T:Serialize> Serialize for DirectorySingle<T> {
 
 
 /// [`DirectoryMulti`] is a special type representing directory in [`PathTreeMulti`]
-#[cfg_attr(feature = "deku", derive(DekuRead, DekuWrite))]
 #[cfg_attr(feature = "serde", derive(Deserialize))]
 #[cfg_attr(feature = "bevy", derive(Component))]
 #[derive(Default, Clone, Debug, PartialEq)]

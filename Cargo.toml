@@ -15,11 +15,9 @@ ahash = {version = "0.8.3"}
 bevy_utils = "0.11.2"
 colored = "2.0.4"
 
-deku = { version = "0.16.0", default_features = false, features = ["std"], optional = true }
 serde = {version = "1.0.188", default_features = false, features = ["derive"], optional = true }
 bevy = {version = "0.11.2", default_features = false, optional = true }
 
 [features]
-deku = ["dep:deku"]
 serde = ["dep:serde", "ahash/serde"]
 bevy = ["dep:bevy"]

@@ -173,7 +173,7 @@ pub struct PathTreeSingle<T> {
     pub directory: DirectorySingle<T>,
 }
 impl <T> PathTreeSingle<T> {
-    /// Creates a new [`PathTreeMulti`] with the given name
+    /// Creates a new pathtree with the given name
     pub fn new(name: impl Borrow<str>) -> Self {
         let mut directory = DirectorySingle::new();
         directory.name = name.borrow().to_owned();
@@ -305,7 +305,7 @@ pub struct PathTreeMulti<T> {
     pub directory: DirectoryMulti<T>,
 }
 impl <T> PathTreeMulti<T> {
-    /// Creates a new [`PathTreeMulti`] with the given name
+    /// Creates a new pathtree with the given name
     pub fn new(name: impl Borrow<str>) -> Self {
         let mut directory = DirectoryMulti::new();
         directory.name = name.borrow().to_owned();

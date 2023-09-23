@@ -24,7 +24,7 @@
 //! tree.create_directory("New_Folder/Strings").unwrap();
 //! tree.create_directory("Cool_Folder").unwrap();
 //! 
-//! tree.insert_file("Hello World!".to_string(), "New_Folder/Strings/text.txt").unwrap();
+//! tree.insert_file("New_Folder/Strings/text.txt", "Hello World!".to_string()).unwrap();
 //! 
 //! println!("{}", tree.list());
 //! 

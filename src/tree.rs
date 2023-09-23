@@ -3,6 +3,11 @@ use colored::Colorize;
 use bevy_utils::thiserror::Error;
 use std::borrow::Borrow;
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, ser::{Serialize, SerializeStruct, Serializer}};
+
+use bevy::prelude::Component;
+
 
 // ===========================================================
 // === General stuff ===
@@ -161,7 +166,9 @@ pub type Directory<T> = DirectoryMulti<T>;
 /// 
 /// The path always ends with the target directory.
 #[cfg_attr(feature = "deku", derive(DekuRead, DekuWrite))]
-#[derive(Default, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Deserialize))]
+#[cfg_attr(feature = "bevy", derive(Component))]
+#[derive(Default, Clone, Debug, PartialEq, Component)]
 pub struct PathTreeSingle<T> {
     pub directory: DirectorySingle<T>,
 }
@@ -273,11 +280,26 @@ impl <T> Into<DirectorySingle<T>> for PathTreeSingle<T>{
     }
 }
 
+#[cfg(feature = "serde")]
+impl <T:Serialize> Serialize for PathTreeSingle<T> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut s = serializer.serialize_struct("PathTreeSingle", 1)?;
+        s.serialize_field("directory", &self.directory)?;
+        s.end()
+    }
+}
+
+
+
 /// # PathTree Multi
 /// [`PathTreeMulti`] can store multiple files `<T>` on the nested [`DirectoryMulti`]
 /// 
 /// The path is also used to specify the name of the file, so the target directory is the second one from the end in cases where you work with files
 #[cfg_attr(feature = "deku", derive(DekuRead, DekuWrite))]
+#[cfg_attr(feature = "serde", derive(Deserialize))]
 #[derive(Default, Clone, Debug, PartialEq)]
 pub struct PathTreeMulti<T> {
     pub directory: DirectoryMulti<T>,
@@ -390,12 +412,24 @@ impl <T> Into<DirectoryMulti<T>> for PathTreeMulti<T>{
     }
 }
 
+#[cfg(feature = "serde")]
+impl <T:Serialize> Serialize for PathTreeMulti<T> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut s = serializer.serialize_struct("PathTreeMulti", 1)?;
+        s.serialize_field("directory", &self.directory)?;
+        s.end()
+    }
+}
 
 // ===========================================================
 // === DIRECTORY ===
 
 /// [`DirectorySingle`] is a special type representing directory in [`PathTreeSingle`]
 #[cfg_attr(feature = "deku", derive(DekuRead, DekuWrite))]
+#[cfg_attr(feature = "serde", derive(Deserialize))]
 #[derive(Default, Clone, Debug, PartialEq)]
 pub struct DirectorySingle<T> {
     //# SYNC =======
@@ -636,8 +670,27 @@ impl <T> PathioFile<T> for DirectorySingle<T> {
     }
 }
 
+#[cfg(feature = "serde")]
+impl <T:Serialize> Serialize for DirectorySingle<T> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut s = serializer.serialize_struct("DirectorySingle", 5)?;
+        s.serialize_field("name", &self.name)?;
+        s.serialize_field("path", &self.path)?;
+        s.serialize_field("depth", &self.depth)?;
+        s.serialize_field("file", &self.file)?;
+        s.serialize_field("directory", &self.directory)?;
+        s.end()
+    }
+}
+
+
+
 /// [`DirectoryMulti`] is a special type representing directory in [`PathTreeMulti`]
 #[cfg_attr(feature = "deku", derive(DekuRead, DekuWrite))]
+#[cfg_attr(feature = "serde", derive(Deserialize))]
 #[derive(Default, Clone, Debug, PartialEq)]
 pub struct DirectoryMulti<T> {
     //# SYNC =======
@@ -888,17 +941,19 @@ impl <T> PathioFileStorage<T> for DirectoryMulti<T> {
     }
 }
 
-
-
-
-
-
-
-
-//Hide component derive under a feature flag
-// Same with serde, deku, etc
-
-// support for ""../../"" in the path
-// support for "/dir" in the path (if this case, use ../ to go all the way up and then use the rest of the path)
-// Result<PathioOk, PathioError>, pathiook => Value or "Go up + remaining path"
+#[cfg(feature = "serde")]
+impl <T:Serialize> Serialize for DirectoryMulti<T> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut s = serializer.serialize_struct("DirectoryMulti", 5)?;
+        s.serialize_field("name", &self.name)?;
+        s.serialize_field("path", &self.path)?;
+        s.serialize_field("depth", &self.depth)?;
+        s.serialize_field("file", &self.file)?;
+        s.serialize_field("directory", &self.directory)?;
+        s.end()
+    }
+}
 

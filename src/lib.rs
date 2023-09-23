@@ -70,4 +70,5 @@ pub mod test {
 
         tree.borrow_directory("created_directory/inserted_directory").unwrap();
     }
+
 }

@@ -1,6 +1,6 @@
 use ahash::AHashMap as HashMap;
 use colored::Colorize;
-use bevy_utils::thiserror::Error;
+use thiserror::Error;
 use std::borrow::Borrow;
 
 #[cfg(feature = "serde")]

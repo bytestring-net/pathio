@@ -56,6 +56,7 @@ pub mod prelude {
     pub use crate::PathioFile;
     pub use crate::PathioFileStorage;
     pub use crate::PathTree;
+    pub use crate::{PathTreeInit, DirectoryInit};
 }
 
 #[cfg(test)]

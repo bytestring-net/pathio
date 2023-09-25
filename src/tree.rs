@@ -56,6 +56,14 @@ fn split_last(string: &str, delimiter: &str) -> (String, String) {
     (output, String::from(str_list[str_list.len() - 1]))
 }
 
+pub trait PathTreeInit {
+    /// Creates a new pathtree with the given name
+    fn new(name: impl Borrow<str>) -> Self;
+}
+pub trait DirectoryInit {
+    /// Create new unassigned directory
+    fn new() -> Self;
+}
 
 pub trait PathioHierarchy<D> {
     /// Adds subdirectory directly to this directory
@@ -172,9 +180,8 @@ pub type Directory<T> = DirectoryMulti<T>;
 pub struct PathTreeSingle<T> {
     pub directory: DirectorySingle<T>,
 }
-impl <T> PathTreeSingle<T> {
-    /// Creates a new pathtree with the given name
-    pub fn new(name: impl Borrow<str>) -> Self {
+impl <T> PathTreeInit for PathTreeSingle<T> {
+    fn new(name: impl Borrow<str>) -> Self {
         let mut directory = DirectorySingle::new();
         directory.name = name.borrow().to_owned();
         directory.path = "".to_owned();
@@ -304,9 +311,8 @@ impl <T:Serialize> Serialize for PathTreeSingle<T> {
 pub struct PathTreeMulti<T> {
     pub directory: DirectoryMulti<T>,
 }
-impl <T> PathTreeMulti<T> {
-    /// Creates a new pathtree with the given name
-    pub fn new(name: impl Borrow<str>) -> Self {
+impl <T> PathTreeInit for PathTreeMulti<T> {
+    fn new(name: impl Borrow<str>) -> Self {
         let mut directory = DirectoryMulti::new();
         directory.name = name.borrow().to_owned();
         directory.path = "".to_owned();
@@ -441,9 +447,8 @@ pub struct DirectorySingle<T> {
     pub file: Option<T>,
     pub directory: HashMap<String, DirectorySingle<T>>,
 }
-impl <T> DirectorySingle<T> {
-    /// Create new unassigned directory
-    pub fn new() -> Self {
+impl <T> DirectoryInit for DirectorySingle<T> {
+    fn new() -> Self {
         DirectorySingle {
             name: "UNASSIGNED DIRECTORY".to_owned(),
             path: "EMPTY PATH".to_owned(),
@@ -453,7 +458,8 @@ impl <T> DirectorySingle<T> {
             directory: HashMap::new(),
         }
     }
-
+}
+impl <T> DirectorySingle<T> {
     /// Generate overview of the inner tree and write the mapped output to the given string with data formatted to a certain level depth
     pub(super) fn cascade_list(&self, mut string: String, level: u32) -> String {
         if let Some(_) = self.file {
@@ -702,9 +708,8 @@ pub struct DirectoryMulti<T> {
     pub file: HashMap<String, T>,
     pub directory: HashMap<String, DirectoryMulti<T>>,
 }
-impl <T> DirectoryMulti<T> {
-    /// Create new unassigned directory
-    pub fn new() -> Self {
+impl <T> DirectoryInit for DirectoryMulti<T> {
+    fn new() -> Self {
         DirectoryMulti {
             name: "UNASSIGNED DIRECTORY".to_owned(),
             path: "EMPTY PATH".to_owned(),
@@ -714,7 +719,8 @@ impl <T> DirectoryMulti<T> {
             directory: HashMap::new(),
         }
     }
-
+}
+impl <T> DirectoryMulti<T> {
     /// Generate overview of the inner tree and write the mapped output to the given string with data formatted to a certain level depth
     pub(super) fn cascade_list(&self, mut string: String, level: u32) -> String {
         for (name, _file) in &self.file {

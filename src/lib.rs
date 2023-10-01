@@ -70,6 +70,8 @@ pub mod test {
         tree.insert_directory("created_directory/inserted_directory", Directory::new()).unwrap();
 
         tree.borrow_directory("created_directory/inserted_directory").unwrap();
+
+        assert_eq!(tree.borrow_directory("created_directory").unwrap(), tree.borrow_directory("created_directory/.").unwrap())
     }
 
 }

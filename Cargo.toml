@@ -1,6 +1,6 @@
 [package]
 name = "pathio"
-version = "0.1.6"
+version = "0.2.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 authors = ["Dominik Kaspar"]
@@ -15,8 +15,8 @@ ahash = {version = "0.8.3"}
 thiserror = "1.0.48"
 colored = "2.0.4"
 
-serde = {version = "1.0.188", default_features = false, features = ["derive"], optional = true }
-bevy = {version = "^0.11.0", default_features = false, optional = true }
+serde = {version = "^1", default_features = false, features = ["derive"], optional = true }
+bevy = {version = "^0", default_features = false, optional = true }
 
 [features]
 serde = ["dep:serde", "ahash/serde"]

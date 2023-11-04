@@ -87,6 +87,9 @@ pub trait PathioHierarchy<D> {
     /// Generate overview of the inner tree in a stringified form
     fn tree(&self) -> String;
 
+    /// Generate overview of the directories inside the inner tree in a stringified form
+    fn tree_dir(&self) -> String;
+
     /// Returns cached name
     fn get_name(&self) -> &String;
 
@@ -228,6 +231,10 @@ impl <T> PathioHierarchy<DirectorySingle<T>> for PathTreeSingle<T> {
         self.directory.tree()
     }
 
+    fn tree_dir(&self) -> String {
+        self.directory.tree_dir()
+    }
+
     fn get_name(&self) -> &String {
         &self.directory.get_name()
     }
@@ -363,6 +370,10 @@ impl <T> PathioHierarchy<DirectoryMulti<T>> for PathTreeMulti<T> {
         self.directory.tree()
     }
 
+    fn tree_dir(&self) -> String {
+        self.directory.tree_dir()
+    }
+
     fn get_name(&self) -> &String {
         &self.directory.get_name()
     }
@@ -457,19 +468,21 @@ impl <T> DirectoryInit for DirectorySingle<T> {
 }
 impl <T> DirectorySingle<T> {
     /// Generate overview of the inner tree and write the mapped output to the given string with data formatted to a certain level depth
-    pub(super) fn cascade_tree(&self, mut string: String, level: u32) -> String {
-        if let Some(_) = self.file {
-            let mut text = String::from("\n  ");
-            for _ in 0..level { text += "|    " }
-            text += "|-> ";
-            string = format!("{}{}{}", string, text.black(), "FILE".bold().bright_cyan());
+    pub(super) fn cascade_tree(&self, mut string: String, level: u32, param: &str) -> String {
+        if !param.contains("no-dir") {
+            if let Some(_) = self.file {
+                let mut text = String::from("\n  ");
+                for _ in 0..level { text += "|    " }
+                text += "|-> ";
+                string = format!("{}{}{}", string, text.black(), "FILE".bold().bright_cyan());
+            }
         }
         for (name, directory) in &self.directory {
             let mut text = String::from("\n  ");
             for _ in 0..level { text += "|    " }
             text += "|-> ";
             string = format!("{}{}{}", string, text.black(), name.bold().yellow());
-            string = directory.cascade_tree(string, level + 1);
+            string = directory.cascade_tree(string, level + 1, param);
         }
         string
     }
@@ -600,7 +613,16 @@ impl <T> PathioHierarchy<DirectorySingle<T>> for DirectorySingle<T> {
         format!(
             "> {}{}",
             self.name.purple().bold().underline(),
-            self.cascade_tree(text, 0)
+            self.cascade_tree(text, 0, "")
+        )
+    }
+
+    fn tree_dir(&self) -> String {
+        let text = String::new();
+        format!(
+            "> {}{}",
+            self.name.purple().bold().underline(),
+            self.cascade_tree(text, 0, "no-dir")
         )
     }
 
@@ -727,19 +749,21 @@ impl <T> DirectoryInit for DirectoryMulti<T> {
 }
 impl <T> DirectoryMulti<T> {
     /// Generate overview of the inner tree and write the mapped output to the given string with data formatted to a certain level depth
-    pub(super) fn cascade_tree(&self, mut string: String, level: u32) -> String {
-        for (name, _file) in &self.file {
-            let mut text = String::from("\n  ");
-            for _ in 0..level { text += "|    " }
-            text += "|-> ";
-            string = format!("{}{}{}", string, text.black(), name.bold().bright_cyan());
+    pub(super) fn cascade_tree(&self, mut string: String, level: u32, param: &str) -> String {
+        if !param.contains("no-dir") {
+            for (name, _file) in &self.file {
+                let mut text = String::from("\n  ");
+                for _ in 0..level { text += "|    " }
+                text += "|-> ";
+                string = format!("{}{}{}", string, text.black(), name.bold().bright_cyan());
+            }
         }
         for (name, directory) in &self.directory {
             let mut text = String::from("\n  ");
             for _ in 0..level { text += "|    " }
             text += "|-> ";
             string = format!("{}{}{}", string, text.black(), name.bold().yellow());
-            string = directory.cascade_tree(string, level + 1);
+            string = directory.cascade_tree(string, level + 1, param);
         }
         string
     }
@@ -873,7 +897,16 @@ impl <T> PathioHierarchy<DirectoryMulti<T>> for DirectoryMulti<T> {
         format!(
             "> {}{}",
             self.name.purple().bold().underline(),
-            self.cascade_tree(text, 0)
+            self.cascade_tree(text, 0, "")
+        )
+    }
+
+    fn tree_dir(&self) -> String {
+        let text = String::new();
+        format!(
+            "> {}{}",
+            self.name.purple().bold().underline(),
+            self.cascade_tree(text, 0, "no-dir")
         )
     }
 

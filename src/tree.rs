@@ -81,8 +81,11 @@ pub trait PathioHierarchy<D> {
     /// Merges PathTree or Directory content into itself
     fn merge(&mut self, directory: impl Into<D>) -> Result<(), PathioError>;
 
+    /// Recursively iterate over all containing directories and their subdirectories and return them in one vector
+    fn crawl(&self) -> Vec<&D>;
+
     /// Generate overview of the inner tree in a stringified form
-    fn list(&self) -> String;
+    fn tree(&self) -> String;
 
     /// Returns cached name
     fn get_name(&self) -> &String;
@@ -217,8 +220,12 @@ impl <T> PathioHierarchy<DirectorySingle<T>> for PathTreeSingle<T> {
         self.directory.merge(directory.into())
     }
 
-    fn list(&self) -> String {
-        self.directory.list()
+    fn crawl(&self) -> Vec<&DirectorySingle<T>> {
+        self.directory.crawl()
+    }
+
+    fn tree(&self) -> String {
+        self.directory.tree()
     }
 
     fn get_name(&self) -> &String {
@@ -348,8 +355,12 @@ impl <T> PathioHierarchy<DirectoryMulti<T>> for PathTreeMulti<T> {
         self.directory.merge(directory.into())
     }
 
-    fn list(&self) -> String {
-        self.directory.list()
+    fn crawl(&self) -> Vec<&DirectoryMulti<T>> {
+        self.directory.crawl()
+    }
+
+    fn tree(&self) -> String {
+        self.directory.tree()
     }
 
     fn get_name(&self) -> &String {
@@ -446,7 +457,7 @@ impl <T> DirectoryInit for DirectorySingle<T> {
 }
 impl <T> DirectorySingle<T> {
     /// Generate overview of the inner tree and write the mapped output to the given string with data formatted to a certain level depth
-    pub(super) fn cascade_list(&self, mut string: String, level: u32) -> String {
+    pub(super) fn cascade_tree(&self, mut string: String, level: u32) -> String {
         if let Some(_) = self.file {
             let mut text = String::from("\n  ");
             for _ in 0..level { text += "|    " }
@@ -458,7 +469,7 @@ impl <T> DirectorySingle<T> {
             for _ in 0..level { text += "|    " }
             text += "|-> ";
             string = format!("{}{}{}", string, text.black(), name.bold().yellow());
-            string = directory.cascade_list(string, level + 1);
+            string = directory.cascade_tree(string, level + 1);
         }
         string
     }
@@ -574,12 +585,22 @@ impl <T> PathioHierarchy<DirectorySingle<T>> for DirectorySingle<T> {
         Ok(())
     }
 
-    fn list(&self) -> String {
+    fn crawl(&self) -> Vec<&DirectorySingle<T>> {
+        let mut vector = Vec::new();
+        for pair in &self.directory{
+            vector.push(pair.1);
+            let mut content = pair.1.crawl();
+            vector.append(&mut content);
+        }
+        vector
+    }
+
+    fn tree(&self) -> String {
         let text = String::new();
         format!(
             "> {}{}",
             self.name.purple().bold().underline(),
-            self.cascade_list(text, 0)
+            self.cascade_tree(text, 0)
         )
     }
 
@@ -706,7 +727,7 @@ impl <T> DirectoryInit for DirectoryMulti<T> {
 }
 impl <T> DirectoryMulti<T> {
     /// Generate overview of the inner tree and write the mapped output to the given string with data formatted to a certain level depth
-    pub(super) fn cascade_list(&self, mut string: String, level: u32) -> String {
+    pub(super) fn cascade_tree(&self, mut string: String, level: u32) -> String {
         for (name, _file) in &self.file {
             let mut text = String::from("\n  ");
             for _ in 0..level { text += "|    " }
@@ -718,7 +739,7 @@ impl <T> DirectoryMulti<T> {
             for _ in 0..level { text += "|    " }
             text += "|-> ";
             string = format!("{}{}{}", string, text.black(), name.bold().yellow());
-            string = directory.cascade_list(string, level + 1);
+            string = directory.cascade_tree(string, level + 1);
         }
         string
     }
@@ -837,12 +858,22 @@ impl <T> PathioHierarchy<DirectoryMulti<T>> for DirectoryMulti<T> {
         Ok(())
     }
 
-    fn list(&self) -> String {
+    fn crawl(&self) -> Vec<&DirectoryMulti<T>> {
+        let mut vector = Vec::new();
+        for pair in &self.directory{
+            vector.push(pair.1);
+            let mut content = pair.1.crawl();
+            vector.append(&mut content);
+        }
+        vector
+    }
+
+    fn tree(&self) -> String {
         let text = String::new();
         format!(
             "> {}{}",
             self.name.purple().bold().underline(),
-            self.cascade_list(text, 0)
+            self.cascade_tree(text, 0)
         )
     }
 

@@ -67,9 +67,9 @@ pub mod test {
         let mut tree: PathTree<bool> = PathTree::new("Root");
         tree.add_directory("added_directory", Directory::new()).unwrap();
         tree.create_directory("created_directory").unwrap();
-        tree.insert_directory("created_directory/inserted_directory", Directory::new()).unwrap();
+        tree.insert_directory("created_directory/.inserted_directory", Directory::new()).unwrap();
 
-        tree.borrow_directory("created_directory/inserted_directory").unwrap();
+        tree.borrow_directory("created_directory/.inserted_directory").unwrap();
 
         tree.tree();
 

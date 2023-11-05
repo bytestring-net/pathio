@@ -478,6 +478,7 @@ impl <T> DirectorySingle<T> {
             }
         }
         for (name, directory) in &self.directory {
+            if name.starts_with('.') {continue;}
             let mut text = String::from("\n  ");
             for _ in 0..level { text += "|    " }
             text += "|-> ";
@@ -752,6 +753,7 @@ impl <T> DirectoryMulti<T> {
     pub(super) fn cascade_tree(&self, mut string: String, level: u32, param: &str) -> String {
         if !param.contains("no-dir") {
             for (name, _file) in &self.file {
+                if name.starts_with('.') {continue;}
                 let mut text = String::from("\n  ");
                 for _ in 0..level { text += "|    " }
                 text += "|-> ";
@@ -759,6 +761,7 @@ impl <T> DirectoryMulti<T> {
             }
         }
         for (name, directory) in &self.directory {
+            if name.starts_with('.') {continue;}
             let mut text = String::from("\n  ");
             for _ in 0..level { text += "|    " }
             text += "|-> ";

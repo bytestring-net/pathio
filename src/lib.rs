@@ -71,7 +71,11 @@ pub mod test {
 
         tree.borrow_directory("created_directory/inserted_directory").unwrap();
 
-        assert_eq!(tree.borrow_directory("created_directory").unwrap(), tree.borrow_directory("created_directory/.").unwrap())
+        tree.create_directory("created_directory/inserted_directory/").unwrap();
+        
+        assert_eq!(tree.borrow_directory("created_directory/inserted_directory/.||#:0").unwrap().get_name(), ".||#:0");
+
+        assert_eq!(tree.borrow_directory("created_directory").unwrap(), tree.borrow_directory("created_directory/.").unwrap());
     }
 
 }

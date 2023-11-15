@@ -488,7 +488,18 @@ impl <T> PathioHierarchy<DirectorySingle<T>> for DirectorySingle<T> {
                 Err(PathioError::NameInUse(name.borrow().to_owned()))
             }
         } else {
-            Err(PathioError::InvalidPath(name.borrow().to_owned()))
+            let mut generated_name = format!(".||#:{}", self.directory.len());
+            let mut i = 0;
+            while self.directory.contains_key(&generated_name) == true {
+                generated_name = format!(".||#:{}", self.directory.len()+i);
+                i += 1;
+                if i > 100 { return Err(PathioError::InvalidPath("Failed to generate name, max threshold reached!".to_owned())); }
+            }
+            directory.name = generated_name.to_owned();
+            directory.path = if self.path.is_empty() { generated_name.to_owned() } else { self.path.to_owned() + "/" + &generated_name };
+            directory.depth = self.depth + 1.0;
+            self.directory.insert(generated_name.to_owned(), directory);
+            Ok(())
         }
     }
 
@@ -758,7 +769,18 @@ impl <T> PathioHierarchy<DirectoryMulti<T>> for DirectoryMulti<T> {
                 Err(PathioError::NameInUse(name.borrow().to_owned()))
             }
         } else {
-            Err(PathioError::InvalidPath(name.borrow().to_owned()))
+            let mut generated_name = format!(".||#:{}", self.directory.len());
+            let mut i = 0;
+            while self.directory.contains_key(&generated_name) == true {
+                generated_name = format!(".||#:{}", self.directory.len()+i);
+                i += 1;
+                if i > 100 { return Err(PathioError::InvalidPath("Failed to generate name, max threshold reached!".to_owned())); }
+            }
+            directory.name = generated_name.to_owned();
+            directory.path = if self.path.is_empty() { generated_name.to_owned() } else { self.path.to_owned() + "/" + &generated_name };
+            directory.depth = self.depth + 1.0;
+            self.directory.insert(generated_name.to_owned(), directory);
+            Ok(())
         }
     }
 

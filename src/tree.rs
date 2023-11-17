@@ -51,14 +51,14 @@ pub trait DirectoryInit {
 }
 
 pub trait PathioHierarchy<D> {
-    /// Adds subdirectory directly to this directory
-    fn add_directory(&mut self, name: impl Borrow<str>, directory: D) -> Result<(), PathioError>;
+    /// Adds subdirectory directly to this directory, returns new subdirectories' name
+    fn add_directory(&mut self, name: impl Borrow<str>, directory: D) -> Result<String, PathioError>;
 
-    /// Inserts subdirectory to self or any subdirectory
-    fn insert_directory(&mut self, path: impl Borrow<str>, directory: D,) -> Result<(), PathioError>;
+    /// Inserts subdirectory to self or any subdirectory, returns inserted subdirectories' name
+    fn insert_directory(&mut self, path: impl Borrow<str>, directory: D,) -> Result<String, PathioError>;
 
-    /// Creates subdirectory in root or any subdirectory
-    fn create_directory(&mut self, path: impl Borrow<str>) -> Result<(), PathioError>;
+    /// Creates subdirectory in root or any subdirectory, returns new subdirectories' name
+    fn create_directory(&mut self, path: impl Borrow<str>) -> Result<String, PathioError>;
 
     /// Removes directory from self and returns it
     fn take_directory(&mut self, name: impl Borrow<str>) -> Result<D, PathioError>;
@@ -183,15 +183,15 @@ impl <T> PathTreeInit for PathTreeSingle<T> {
     }
 }
 impl <T> PathioHierarchy<DirectorySingle<T>> for PathTreeSingle<T> {
-    fn add_directory(&mut self, name: impl Borrow<str>, directory: DirectorySingle<T>,) -> Result<(), PathioError>{
+    fn add_directory(&mut self, name: impl Borrow<str>, directory: DirectorySingle<T>,) -> Result<String, PathioError>{
         self.directory.add_directory(name, directory)
     }
 
-    fn insert_directory(&mut self, path: impl Borrow<str>, directory: DirectorySingle<T>,) -> Result<(), PathioError>{
+    fn insert_directory(&mut self, path: impl Borrow<str>, directory: DirectorySingle<T>,) -> Result<String, PathioError>{
         self.directory.insert_directory(path, directory)
     }
 
-    fn create_directory(&mut self, path: impl Borrow<str>) -> Result<(), PathioError>{
+    fn create_directory(&mut self, path: impl Borrow<str>) -> Result<String, PathioError>{
         self.directory.create_directory(path)
     }
 
@@ -322,15 +322,15 @@ impl <T> PathTreeInit for PathTreeMulti<T> {
     }
 }
 impl <T> PathioHierarchy<DirectoryMulti<T>> for PathTreeMulti<T> {
-    fn add_directory(&mut self, name: impl Borrow<str>, directory: DirectoryMulti<T>) -> Result<(), PathioError>{
+    fn add_directory(&mut self, name: impl Borrow<str>, directory: DirectoryMulti<T>) -> Result<String, PathioError>{
         self.directory.add_directory(name, directory)
     }
 
-    fn insert_directory(&mut self, path: impl Borrow<str>, directory: DirectoryMulti<T>) -> Result<(), PathioError>{
+    fn insert_directory(&mut self, path: impl Borrow<str>, directory: DirectoryMulti<T>) -> Result<String, PathioError>{
         self.directory.insert_directory(path, directory)
     }
 
-    fn create_directory(&mut self, path: impl Borrow<str>) -> Result<(), PathioError>{
+    fn create_directory(&mut self, path: impl Borrow<str>) -> Result<String, PathioError>{
         self.directory.create_directory(path)
     }
 
@@ -489,7 +489,7 @@ impl <T> DirectorySingle<T> {
     }
 }
 impl <T> PathioHierarchy<DirectorySingle<T>> for DirectorySingle<T> {
-    fn add_directory(&mut self, name: impl Borrow<str>, mut directory: DirectorySingle<T>) -> Result<(), PathioError>{
+    fn add_directory(&mut self, name: impl Borrow<str>, mut directory: DirectorySingle<T>) -> Result<String, PathioError>{
         if !name.borrow().is_empty() {
             if name.borrow() == "." { return Err(PathioError::NameInUse("The special symbol '.' is used to refer to 'self' and is not available for use".to_owned())) }
             if self.directory.contains_key(name.borrow()) == false {
@@ -497,7 +497,7 @@ impl <T> PathioHierarchy<DirectorySingle<T>> for DirectorySingle<T> {
                 directory.path = if self.path.is_empty() { name.borrow().to_owned() } else { self.path.to_owned() + "/" + name.borrow() };
                 directory.depth = self.depth + 1.0;
                 self.directory.insert(name.borrow().to_owned(), directory);
-                Ok(())
+                Ok(name.borrow().to_owned())
             } else {
                 Err(PathioError::NameInUse(name.borrow().to_owned()))
             }
@@ -513,11 +513,11 @@ impl <T> PathioHierarchy<DirectorySingle<T>> for DirectorySingle<T> {
             directory.path = if self.path.is_empty() { generated_name.to_owned() } else { self.path.to_owned() + "/" + &generated_name };
             directory.depth = self.depth + 1.0;
             self.directory.insert(generated_name.to_owned(), directory);
-            Ok(())
+            Ok(generated_name)
         }
     }
 
-    fn insert_directory(&mut self, path: impl Borrow<str>, directory: DirectorySingle<T>) -> Result<(), PathioError>{
+    fn insert_directory(&mut self, path: impl Borrow<str>, directory: DirectorySingle<T>) -> Result<String, PathioError>{
         match path.borrow().rsplit_once('/'){
             None => self.add_directory(path, directory),
             Some ((directory_path, name)) => match self.borrow_directory_mut(directory_path) {
@@ -527,7 +527,7 @@ impl <T> PathioHierarchy<DirectorySingle<T>> for DirectorySingle<T> {
         }
     }
 
-    fn create_directory(&mut self, path: impl Borrow<str>) -> Result<(), PathioError>{
+    fn create_directory(&mut self, path: impl Borrow<str>) -> Result<String, PathioError>{
         self.insert_directory(path, DirectorySingle::new())
     }
 
@@ -783,7 +783,7 @@ impl <T> DirectoryMulti<T> {
     }
 }
 impl <T> PathioHierarchy<DirectoryMulti<T>> for DirectoryMulti<T> {
-    fn add_directory(&mut self, name: impl Borrow<str>, mut directory: DirectoryMulti<T>) -> Result<(), PathioError>{
+    fn add_directory(&mut self, name: impl Borrow<str>, mut directory: DirectoryMulti<T>) -> Result<String, PathioError>{
         if !name.borrow().is_empty() {
             if name.borrow() == "." { return Err(PathioError::NameInUse("The special symbol '.' is used to refer to 'self' and is not available for use".to_owned())) }
             if self.directory.contains_key(name.borrow()) == false {
@@ -791,7 +791,7 @@ impl <T> PathioHierarchy<DirectoryMulti<T>> for DirectoryMulti<T> {
                 directory.path = if self.path.is_empty() { name.borrow().to_owned() } else { self.path.to_owned() + "/" + name.borrow() };
                 directory.depth = self.depth + 1.0;
                 self.directory.insert(name.borrow().to_owned(), directory);
-                Ok(())
+                Ok(name.borrow().to_owned())
             } else {
                 Err(PathioError::NameInUse(name.borrow().to_owned()))
             }
@@ -807,11 +807,11 @@ impl <T> PathioHierarchy<DirectoryMulti<T>> for DirectoryMulti<T> {
             directory.path = if self.path.is_empty() { generated_name.to_owned() } else { self.path.to_owned() + "/" + &generated_name };
             directory.depth = self.depth + 1.0;
             self.directory.insert(generated_name.to_owned(), directory);
-            Ok(())
+            Ok(generated_name)
         }
     }
 
-    fn insert_directory(&mut self, path: impl Borrow<str>, directory: DirectoryMulti<T>) -> Result<(), PathioError>{
+    fn insert_directory(&mut self, path: impl Borrow<str>, directory: DirectoryMulti<T>) -> Result<String, PathioError>{
         match path.borrow().rsplit_once('/'){
             None => self.add_directory(path, directory),
             Some ((directory_path, name)) => match self.borrow_directory_mut(directory_path) {
@@ -821,7 +821,7 @@ impl <T> PathioHierarchy<DirectoryMulti<T>> for DirectoryMulti<T> {
         }
     }
 
-    fn create_directory(&mut self, path: impl Borrow<str>) -> Result<(), PathioError>{
+    fn create_directory(&mut self, path: impl Borrow<str>) -> Result<String, PathioError>{
         self.insert_directory(path, DirectoryMulti::new())
     }
 

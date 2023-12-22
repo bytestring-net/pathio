@@ -1,23 +1,23 @@
 [package]
-name = "pathio"
-version = "0.2.3"
-edition = "2021"
-license = "MIT OR Apache-2.0"
-authors = ["Dominik Kaspar"]
-repository = "https://github.com/bytestring-net/pathio"
-keywords = ["path", "unix", "directory", "hierarchy", "sandbox"]
-categories = ["data-structures", "database", "filesystem", "simulation"]
-description = "Data type for storing generic data on a virtual path tree hierarchy. The data is stored in memory, this is not OS file system abstraction, but immitation"
-readme = "README.md"
+name        = "pathio"
+version     = "0.3.0"
+edition     = "2021"
+license     = "MIT OR Apache-2.0"
+authors     = ["Dominik Kaspar"]
+repository  = "https://github.com/bytestring-net/pathio"
+keywords    = [ "path-tree", "path", "unix", "directory", "hierarchy"]
+categories  = ["data-structures", "database", "filesystem"]
+description = "PathTree data structure similar to HashMap, but for storing generic data organized in directories"
+readme      = "README.md"
 
 [dependencies]
-ahash = {version = "^0.8.3"}
-thiserror = "^1.0.48"
-colored = "^2.0.4"
+ahash     = "^0.8.6"
+thiserror = "^1.0.51"
+colored   = "^2.1.0"
 
-serde = {version = "^1", default_features = false, features = ["derive"], optional = true }
-bevy = {version = "^0", default_features = false, optional = true }
+serde = {version = "^1", default_features = false, optional = true, features = ["derive"] }
+bevy  = {version = "^0", default_features = false, optional = true }
 
 [features]
 serde = ["dep:serde", "ahash/serde"]
-bevy = ["dep:bevy"]
+bevy  = ["dep:bevy"]

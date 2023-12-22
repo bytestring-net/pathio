@@ -3,14 +3,23 @@ use colored::Colorize;
 use thiserror::Error;
 use std::borrow::Borrow;
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, ser::{Serialize, SerializeStruct, Serializer}};
+
+#[cfg(feature = "bevy")]
+use bevy::prelude::Component;
+
 
 // #===============================#
 // #=== GENERIC IMPLEMENTATIONS ===#
 
-/// ## Directory error
-/// Error type indicating something went wrong.
+/// # PathioError
+/// 
+/// PathTree
+/// PathBranch
+/// 
 #[derive(Debug, Error, Clone, PartialEq)]
-pub enum DirError {
+pub enum PathioError {
     /// Error that happens when merging directories. The directory being merged can contain only one file. Drop the other file before merging.
     #[error("File from merging directory was not dropped before merging")]
     FileConflict,
@@ -29,7 +38,7 @@ pub enum DirError {
 
     /// Error that happens when you try to locate a directory that doesn't exist.
     #[error("Unable to locate '{0:}' directory")]
-    NoDir (String),
+    NoDirectory (String),
 
     /// Error that happens when you try to locate a file that doesn't exist.
     #[error("Unable to locate '{0:}' file")]
@@ -37,36 +46,45 @@ pub enum DirError {
 }
 
 
-pub trait DirHierarchy<D> {
+pub trait PathTreeInit {
+    /// Creates a new pathtree with the given name
+    fn new(name: impl Borrow<str>) -> Self;
+}
+pub trait DirectoryInit {
+    /// Create new unassigned directory
+    fn new() -> Self;
+}
+
+pub trait PathioHierarchy<D> {
     /// Adds subdirectory directly to this directory, returns new subdirectories' name
-    fn add_dir(&mut self, name: impl Borrow<str>, directory: D) -> Result<String, DirError>;
+    fn add_directory(&mut self, name: impl Borrow<str>, directory: D) -> Result<String, PathioError>;
 
     /// Inserts subdirectory to self or any subdirectory, returns inserted subdirectories' name
-    fn insert_dir(&mut self, path: impl Borrow<str>, directory: D,) -> Result<String, DirError>;
+    fn insert_directory(&mut self, path: impl Borrow<str>, directory: D,) -> Result<String, PathioError>;
 
     /// Creates subdirectory in root or any subdirectory, returns new subdirectories' name
-    fn create_dir(&mut self, path: impl Borrow<str>) -> Result<String, DirError>;
+    fn create_directory(&mut self, path: impl Borrow<str>) -> Result<String, PathioError>;
 
     /// Removes directory from self and returns it
-    fn take_dir(&mut self, name: impl Borrow<str>) -> Result<D, DirError>;
+    fn take_directory(&mut self, name: impl Borrow<str>) -> Result<D, PathioError>;
 
     /// Removes directory from self or any subdirectory and returns it
-    fn remove_dir(&mut self, path: impl Borrow<str>) -> Result<D, DirError>;
+    fn remove_directory(&mut self, path: impl Borrow<str>) -> Result<D, PathioError>;
 
     /// Borrow directory from self
-    fn obtain_dir(&self, name: impl Borrow<str>) -> Result<&D, DirError>;
+    fn obtain_directory(&self, name: impl Borrow<str>) -> Result<&D, PathioError>;
 
     /// Borrow directory from self
-    fn obtain_dir_mut(&mut self, name: impl Borrow<str>) -> Result<&mut D, DirError>;
+    fn obtain_directory_mut(&mut self, name: impl Borrow<str>) -> Result<&mut D, PathioError>;
   
     /// Borrow directory from self or any subdirectory
-    fn borrow_dir(&self, path: impl Borrow<str>) -> Result<&D, DirError>;
+    fn borrow_directory(&self, path: impl Borrow<str>) -> Result<&D, PathioError>;
 
     /// Borrow directory from self or any subdirectory
-    fn borrow_dir_mut(&mut self, path: impl Borrow<str>) -> Result<&mut D, DirError>;
+    fn borrow_directory_mut(&mut self, path: impl Borrow<str>) -> Result<&mut D, PathioError>;
 
-    /// Merges DirMap or Dir content into itself
-    fn merge(&mut self, directory: impl Into<D>) -> Result<(), DirError>;
+    /// Merges PathTree or Directory content into itself
+    fn merge(&mut self, directory: impl Into<D>) -> Result<(), PathioError>;
 
     /// Recursively iterate over all containing directories and their subdirectories and return them in one vector
     fn crawl(&self) -> Vec<&D>;
@@ -86,18 +104,18 @@ pub trait DirHierarchy<D> {
     /// Returns cached name
     fn get_path(&self) -> &String;
 }
-pub trait DirFile<T> {
+pub trait PathioFile<T> {
     /// Adds file directly to this directory and return existing one
     fn add_file(&mut self, file: T) -> Option<T>;
 
     /// Inserts file to self or any subdirectory and return existing one
-    fn insert_file(&mut self, path: impl Borrow<str>, file: T) -> Result<Option<T>, DirError>;
+    fn insert_file(&mut self, path: impl Borrow<str>, file: T) -> Result<Option<T>, PathioError>;
 
     /// Removes file from self and returns it
     fn take_file(&mut self) -> Option<T>;
 
     /// Removes file from self or any subdirectory and returns it
-    fn remove_file(&mut self, path: impl Borrow<str>) -> Result<Option<T>, DirError>;
+    fn remove_file(&mut self, path: impl Borrow<str>) -> Result<Option<T>, PathioError>;
 
     /// Borrow file from self
     fn obtain_file(&self) -> Option<&T>;
@@ -106,103 +124,111 @@ pub trait DirFile<T> {
     fn obtain_file_mut(&mut self) -> Option<&mut T>;
 
     /// Borrow file from self or any subdirectory
-    fn borrow_file(&self, path: impl Borrow<str>) -> Result<Option<&T>, DirError>;
+    fn borrow_file(&self, path: impl Borrow<str>) -> Result<Option<&T>, PathioError>;
     
     /// Borrow file from self or any subdirectory
-    fn borrow_file_mut(&mut self, path: impl Borrow<str>) -> Result<Option<&mut T>, DirError>;
+    fn borrow_file_mut(&mut self, path: impl Borrow<str>) -> Result<Option<&mut T>, PathioError>;
 }
-pub trait DirFiles<T> {
+pub trait PathioFileStorage<T> {
     /// Adds file directly to this directory
-    fn add_file(&mut self, name: impl Borrow<str>, file: T) -> Result<(), DirError>;
+    fn add_file(&mut self, name: impl Borrow<str>, file: T) -> Result<(), PathioError>;
 
     /// Inserts file to self or any subdirectory
-    fn insert_file(&mut self, path: impl Borrow<str>, file: T) -> Result<(), DirError>;
+    fn insert_file(&mut self, path: impl Borrow<str>, file: T) -> Result<(), PathioError>;
 
     /// Removes file from self and returns it
-    fn take_file(&mut self, name: impl Borrow<str>) -> Result<T, DirError>;
+    fn take_file(&mut self, name: impl Borrow<str>) -> Result<T, PathioError>;
 
     /// Removes file from self or any subdirectory and returns it
-    fn remove_file(&mut self, path: impl Borrow<str>) -> Result<T, DirError>;
+    fn remove_file(&mut self, path: impl Borrow<str>) -> Result<T, PathioError>;
 
     /// Borrow file from self
-    fn obtain_file(&self, name: impl Borrow<str>) -> Result<&T, DirError>;
+    fn obtain_file(&self, name: impl Borrow<str>) -> Result<&T, PathioError>;
     
     /// Borrow file from self
-    fn obtain_file_mut(&mut self, name: impl Borrow<str>) -> Result<&mut T, DirError>;
+    fn obtain_file_mut(&mut self, name: impl Borrow<str>) -> Result<&mut T, PathioError>;
 
     /// Borrow file from self or any subdirectory
-    fn borrow_file(&self, path: impl Borrow<str>) -> Result<&T, DirError>;
+    fn borrow_file(&self, path: impl Borrow<str>) -> Result<&T, PathioError>;
     
     /// Borrow file from self or any subdirectory
-    fn borrow_file_mut(&mut self, path: impl Borrow<str>) -> Result<&mut T, DirError>;
+    fn borrow_file_mut(&mut self, path: impl Borrow<str>) -> Result<&mut T, PathioError>;
 }
 
 
+/// [`PathTree`] is a type [`PathTreeMulti`], which is a special type immitating **UNIX** file system for storing any generic type `<T>`
+pub type PathTree<T> = PathTreeMulti<T>;
+
+/// [`Directory`] is a type [`DirectoryMulti`], which represents a directory in immitating **UNIX** file system for storing any generic type `<T>`
+pub type Directory<T> = DirectoryMulti<T>;
 
 
-// #===============================#
-// #=== DIRMAP IMPLEMENTATIONS ===#
+// ===========================================================
+// === PathTree ===
 
-
+/// # PathTree Single
+/// [`PathTreeSingle`] can store single file `<T>` on the nested [`DirectorySingle`]
+/// 
+/// The path always ends with the target directory.
 #[cfg_attr(feature = "serde", derive(Deserialize))]
 #[cfg_attr(feature = "bevy", derive(Component))]
-#[derive(Debug, Default, Clone, PartialEq)]
-pub struct DirMapSingle<T> {
-    pub directory: DirSingle<T>,
+#[derive(Default, Clone, Debug, PartialEq)]
+pub struct PathTreeSingle<T> {
+    pub directory: DirectorySingle<T>,
 }
-impl <T> DirMapSingle<T> {
-    /// # New
-    /// Create new DirMap
-    pub fn new(name: impl Borrow<str>) -> Self {
-        let mut directory = DirSingle::new();
-        directory.name = name.borrow().into();
-        directory.path = "".into();
-        DirMapSingle { directory }
+impl <T> PathTreeInit for PathTreeSingle<T> {
+    fn new(name: impl Borrow<str>) -> Self {
+        let mut directory = DirectorySingle::new();
+        directory.name = name.borrow().to_owned();
+        directory.path = "".to_owned();
+
+        PathTreeSingle {
+            directory,
+        }
     }
 }
-
-impl <T> DirHierarchy<DirSingle<T>> for DirMapSingle<T> {
-    fn add_dir(&mut self, name: impl Borrow<str>, directory: DirSingle<T>,) -> Result<String, DirError>{
-        self.directory.add_dir(name, directory)
+impl <T> PathioHierarchy<DirectorySingle<T>> for PathTreeSingle<T> {
+    fn add_directory(&mut self, name: impl Borrow<str>, directory: DirectorySingle<T>,) -> Result<String, PathioError>{
+        self.directory.add_directory(name, directory)
     }
 
-    fn insert_dir(&mut self, path: impl Borrow<str>, directory: DirSingle<T>,) -> Result<String, DirError>{
-        self.directory.insert_dir(path, directory)
+    fn insert_directory(&mut self, path: impl Borrow<str>, directory: DirectorySingle<T>,) -> Result<String, PathioError>{
+        self.directory.insert_directory(path, directory)
     }
 
-    fn create_dir(&mut self, path: impl Borrow<str>) -> Result<String, DirError>{
-        self.directory.create_dir(path)
+    fn create_directory(&mut self, path: impl Borrow<str>) -> Result<String, PathioError>{
+        self.directory.create_directory(path)
     }
 
-    fn take_dir(&mut self, name: impl Borrow<str>) -> Result<DirSingle<T>, DirError> {
-        self.directory.take_dir(name)
+    fn take_directory(&mut self, name: impl Borrow<str>) -> Result<DirectorySingle<T>, PathioError> {
+        self.directory.take_directory(name)
     }
 
-    fn remove_dir(&mut self, path: impl Borrow<str>) -> Result<DirSingle<T>, DirError> {
-        self.directory.remove_dir(path)
+    fn remove_directory(&mut self, path: impl Borrow<str>) -> Result<DirectorySingle<T>, PathioError> {
+        self.directory.remove_directory(path)
     }
 
-    fn obtain_dir(&self, name: impl Borrow<str>) -> Result<&DirSingle<T>, DirError> {
-        self.directory.obtain_dir(name)
+    fn obtain_directory(&self, name: impl Borrow<str>) -> Result<&DirectorySingle<T>, PathioError> {
+        self.directory.obtain_directory(name)
     }
 
-    fn obtain_dir_mut(&mut self, name: impl Borrow<str>) -> Result<&mut DirSingle<T>, DirError> {
-        self.directory.obtain_dir_mut(name)
+    fn obtain_directory_mut(&mut self, name: impl Borrow<str>) -> Result<&mut DirectorySingle<T>, PathioError> {
+        self.directory.obtain_directory_mut(name)
     }
   
-    fn borrow_dir(&self, path: impl Borrow<str>) -> Result<&DirSingle<T>, DirError> {
-        self.directory.borrow_dir(path)
+    fn borrow_directory(&self, path: impl Borrow<str>) -> Result<&DirectorySingle<T>, PathioError> {
+        self.directory.borrow_directory(path)
     }
 
-    fn borrow_dir_mut(&mut self, path: impl Borrow<str>) -> Result<&mut DirSingle<T>, DirError> {
-        self.directory.borrow_dir_mut(path)
+    fn borrow_directory_mut(&mut self, path: impl Borrow<str>) -> Result<&mut DirectorySingle<T>, PathioError> {
+        self.directory.borrow_directory_mut(path)
     }
 
-    fn merge(&mut self, directory: impl Into<DirSingle<T>>) -> Result<(), DirError> {
+    fn merge(&mut self, directory: impl Into<DirectorySingle<T>>) -> Result<(), PathioError> {
         self.directory.merge(directory.into())
     }
 
-    fn crawl(&self) -> Vec<&DirSingle<T>> {
+    fn crawl(&self) -> Vec<&DirectorySingle<T>> {
         self.directory.crawl()
     }
 
@@ -226,12 +252,12 @@ impl <T> DirHierarchy<DirSingle<T>> for DirMapSingle<T> {
         &self.directory.get_path()
     }
 }
-impl <T> DirFile<T> for DirMapSingle<T> {
+impl <T> PathioFile<T> for PathTreeSingle<T> {
     fn add_file(&mut self, file: T) -> Option<T> {
         self.directory.add_file(file)
     }
 
-    fn insert_file(&mut self, path: impl Borrow<str>, file: T) -> Result<Option<T>, DirError> {
+    fn insert_file(&mut self, path: impl Borrow<str>, file: T) -> Result<Option<T>, PathioError> {
         self.directory.insert_file(path, file)
     }
 
@@ -239,7 +265,7 @@ impl <T> DirFile<T> for DirMapSingle<T> {
         self.directory.take_file()
     }
 
-    fn remove_file(&mut self, path: impl Borrow<str>) -> Result<Option<T>, DirError> {
+    fn remove_file(&mut self, path: impl Borrow<str>) -> Result<Option<T>, PathioError> {
         self.directory.remove_file(path)
     }
 
@@ -251,27 +277,27 @@ impl <T> DirFile<T> for DirMapSingle<T> {
         self.directory.obtain_file_mut()
     }
 
-    fn borrow_file(&self, path: impl Borrow<str>) -> Result<Option<&T>, DirError> {
+    fn borrow_file(&self, path: impl Borrow<str>) -> Result<Option<&T>, PathioError> {
         self.directory.borrow_file(path)
     }
     
-    fn borrow_file_mut(&mut self, path: impl Borrow<str>) -> Result<Option<&mut T>, DirError> {
+    fn borrow_file_mut(&mut self, path: impl Borrow<str>) -> Result<Option<&mut T>, PathioError> {
         self.directory.borrow_file_mut(path)
     }
 }
-impl <T> Into<DirSingle<T>> for DirMapSingle<T>{
-    fn into(self) -> DirSingle<T> {
+impl <T> Into<DirectorySingle<T>> for PathTreeSingle<T>{
+    fn into(self) -> DirectorySingle<T> {
         self.directory
     }
 }
 
 #[cfg(feature = "serde")]
-impl <T:Serialize> Serialize for DirMapSingle<T> {
+impl <T:Serialize> Serialize for PathTreeSingle<T> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
-        let mut s = serializer.serialize_struct("DirMapSingle", 1)?;
+        let mut s = serializer.serialize_struct("PathTreeSingle", 1)?;
         s.serialize_field("directory", &self.directory)?;
         s.end()
     }
@@ -279,66 +305,69 @@ impl <T:Serialize> Serialize for DirMapSingle<T> {
 
 
 
-
+/// # PathTree Multi
+/// [`PathTreeMulti`] can store multiple files `<T>` on the nested [`DirectoryMulti`]
+/// 
+/// The path is also used to specify the name of the file, so the target directory is the second one from the end in cases where you work with files
 #[cfg_attr(feature = "serde", derive(Deserialize))]
 #[cfg_attr(feature = "bevy", derive(Component))]
-#[derive(Debug, Default, Clone, PartialEq)]
-pub struct DirMapMulti<T> {
-    pub directory: DirMulti<T>,
+#[derive(Default, Clone, Debug, PartialEq)]
+pub struct PathTreeMulti<T> {
+    pub directory: DirectoryMulti<T>,
 }
-impl <T> DirMapMulti<T> {
-    pub fn new(name: impl Borrow<str>) -> Self {
-        let mut directory = DirMulti::new();
+impl <T> PathTreeInit for PathTreeMulti<T> {
+    fn new(name: impl Borrow<str>) -> Self {
+        let mut directory = DirectoryMulti::new();
         directory.name = name.borrow().to_owned();
         directory.path = "".to_owned();
 
-        DirMapMulti {
+        PathTreeMulti {
             directory,
         }
     }
 }
-impl <T> DirHierarchy<DirMulti<T>> for DirMapMulti<T> {
-    fn add_dir(&mut self, name: impl Borrow<str>, directory: DirMulti<T>) -> Result<String, DirError>{
-        self.directory.add_dir(name, directory)
+impl <T> PathioHierarchy<DirectoryMulti<T>> for PathTreeMulti<T> {
+    fn add_directory(&mut self, name: impl Borrow<str>, directory: DirectoryMulti<T>) -> Result<String, PathioError>{
+        self.directory.add_directory(name, directory)
     }
 
-    fn insert_dir(&mut self, path: impl Borrow<str>, directory: DirMulti<T>) -> Result<String, DirError>{
-        self.directory.insert_dir(path, directory)
+    fn insert_directory(&mut self, path: impl Borrow<str>, directory: DirectoryMulti<T>) -> Result<String, PathioError>{
+        self.directory.insert_directory(path, directory)
     }
 
-    fn create_dir(&mut self, path: impl Borrow<str>) -> Result<String, DirError>{
-        self.directory.create_dir(path)
+    fn create_directory(&mut self, path: impl Borrow<str>) -> Result<String, PathioError>{
+        self.directory.create_directory(path)
     }
 
-    fn take_dir(&mut self, name: impl Borrow<str>) -> Result<DirMulti<T>, DirError> {
-        self.directory.take_dir(name)
+    fn take_directory(&mut self, name: impl Borrow<str>) -> Result<DirectoryMulti<T>, PathioError> {
+        self.directory.take_directory(name)
     }
 
-    fn remove_dir(&mut self, path: impl Borrow<str>) -> Result<DirMulti<T>, DirError> {
-        self.directory.remove_dir(path)
+    fn remove_directory(&mut self, path: impl Borrow<str>) -> Result<DirectoryMulti<T>, PathioError> {
+        self.directory.remove_directory(path)
     }
 
-    fn obtain_dir(&self, name: impl Borrow<str>) -> Result<&DirMulti<T>, DirError> {
-        self.directory.obtain_dir(name)
+    fn obtain_directory(&self, name: impl Borrow<str>) -> Result<&DirectoryMulti<T>, PathioError> {
+        self.directory.obtain_directory(name)
     }
 
-    fn obtain_dir_mut(&mut self, name: impl Borrow<str>) -> Result<&mut DirMulti<T>, DirError> {
-        self.directory.obtain_dir_mut(name)
+    fn obtain_directory_mut(&mut self, name: impl Borrow<str>) -> Result<&mut DirectoryMulti<T>, PathioError> {
+        self.directory.obtain_directory_mut(name)
     }
   
-    fn borrow_dir(&self, path: impl Borrow<str>) -> Result<&DirMulti<T>, DirError> {
-        self.directory.borrow_dir(path)
+    fn borrow_directory(&self, path: impl Borrow<str>) -> Result<&DirectoryMulti<T>, PathioError> {
+        self.directory.borrow_directory(path)
     }
 
-    fn borrow_dir_mut(&mut self, path: impl Borrow<str>) -> Result<&mut DirMulti<T>, DirError> {
-        self.directory.borrow_dir_mut(path)
+    fn borrow_directory_mut(&mut self, path: impl Borrow<str>) -> Result<&mut DirectoryMulti<T>, PathioError> {
+        self.directory.borrow_directory_mut(path)
     }
 
-    fn merge(&mut self, directory: impl Into<DirMulti<T>>) -> Result<(), DirError> {
+    fn merge(&mut self, directory: impl Into<DirectoryMulti<T>>) -> Result<(), PathioError> {
         self.directory.merge(directory.into())
     }
 
-    fn crawl(&self) -> Vec<&DirMulti<T>> {
+    fn crawl(&self) -> Vec<&DirectoryMulti<T>> {
         self.directory.crawl()
     }
 
@@ -362,66 +391,65 @@ impl <T> DirHierarchy<DirMulti<T>> for DirMapMulti<T> {
         &self.directory.get_path()
     }
 }
-impl <T> DirFiles<T> for DirMapMulti<T> {
-    fn add_file(&mut self, name: impl Borrow<str>, file: T) -> Result<(), DirError>{
+impl <T> PathioFileStorage<T> for PathTreeMulti<T> {
+    fn add_file(&mut self, name: impl Borrow<str>, file: T) -> Result<(), PathioError>{
         self.directory.add_file(name, file)
     }
 
-    fn insert_file(&mut self, path: impl Borrow<str>, file: T) -> Result<(), DirError>{
+    fn insert_file(&mut self, path: impl Borrow<str>, file: T) -> Result<(), PathioError>{
         self.directory.insert_file(path, file)
     }
 
-    fn take_file(&mut self, name: impl Borrow<str>) -> Result<T, DirError> {
+    fn take_file(&mut self, name: impl Borrow<str>) -> Result<T, PathioError> {
         self.directory.take_file(name)
     }
 
-    fn remove_file(&mut self, path: impl Borrow<str>) -> Result<T, DirError> {
+    fn remove_file(&mut self, path: impl Borrow<str>) -> Result<T, PathioError> {
         self.directory.remove_file(path)
     }
 
-    fn obtain_file(&self, name: impl Borrow<str>) -> Result<&T, DirError> {
+    fn obtain_file(&self, name: impl Borrow<str>) -> Result<&T, PathioError> {
         self.directory.obtain_file(name)
     }
     
-    fn obtain_file_mut(&mut self, name: impl Borrow<str>) -> Result<&mut T, DirError> {
+    fn obtain_file_mut(&mut self, name: impl Borrow<str>) -> Result<&mut T, PathioError> {
         self.directory.obtain_file_mut(name)
     }
 
-    fn borrow_file(&self, path: impl Borrow<str>) -> Result<&T, DirError> {
+    fn borrow_file(&self, path: impl Borrow<str>) -> Result<&T, PathioError> {
         self.directory.borrow_file(path)
     }
     
-    fn borrow_file_mut(&mut self, path: impl Borrow<str>) -> Result<&mut T, DirError> {
+    fn borrow_file_mut(&mut self, path: impl Borrow<str>) -> Result<&mut T, PathioError> {
         self.directory.borrow_file_mut(path)
     }
 }
-impl <T> Into<DirMulti<T>> for DirMapMulti<T>{
-    fn into(self) -> DirMulti<T> {
+impl <T> Into<DirectoryMulti<T>> for PathTreeMulti<T>{
+    fn into(self) -> DirectoryMulti<T> {
         self.directory
     }
 }
 
 #[cfg(feature = "serde")]
-impl <T:Serialize> Serialize for DirMapMulti<T> {
+impl <T:Serialize> Serialize for PathTreeMulti<T> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
-        let mut s = serializer.serialize_struct("DirMapMulti", 1)?;
+        let mut s = serializer.serialize_struct("PathTreeMulti", 1)?;
         s.serialize_field("directory", &self.directory)?;
         s.end()
     }
 }
 
+// ===========================================================
+// === DIRECTORY ===
 
-// #===========================#
-// #=== DIR IMPLEMENTATIONS ===#
-
-
+/// [`DirectorySingle`] is a special type representing directory in [`PathTreeSingle`]
 #[cfg_attr(feature = "serde", derive(Deserialize))]
 #[cfg_attr(feature = "bevy", derive(Component))]
-#[derive(Debug, Default, Clone, PartialEq)]
-pub struct DirSingle<T> {
+#[derive(Default, Clone, Debug, PartialEq)]
+pub struct DirectorySingle<T> {
     //# SYNC =======
     name: String,
     path: String,
@@ -429,11 +457,11 @@ pub struct DirSingle<T> {
 
     //# DATA =======
     pub file: Option<T>,
-    pub directory: HashMap<String, DirSingle<T>>,
+    pub directory: HashMap<String, DirectorySingle<T>>,
 }
-impl <T> DirSingle<T> {
-    pub fn new() -> Self {
-        DirSingle {
+impl <T> DirectoryInit for DirectorySingle<T> {
+    fn new() -> Self {
+        DirectorySingle {
             name: "UNASSIGNED DIRECTORY".to_owned(),
             path: "EMPTY PATH".to_owned(),
             depth: 0.0,
@@ -443,9 +471,9 @@ impl <T> DirSingle<T> {
         }
     }
 }
-impl <T> DirSingle<T> {
+impl <T> DirectorySingle<T> {
     /// Generate overview of the inner tree and write the mapped output to the given string with data formatted to a certain level depth
-    pub(crate) fn cascade_tree(&self, mut string: String, level: u32, param: &str) -> String {
+    pub(super) fn cascade_tree(&self, mut string: String, level: u32, param: &str) -> String {
         if !param.contains("no-dir") {
             if let Some(_) = self.file {
                 let mut text = String::from("\n  ");
@@ -465,10 +493,10 @@ impl <T> DirSingle<T> {
         string
     }
 }
-impl <T> DirHierarchy<DirSingle<T>> for DirSingle<T> {
-    fn add_dir(&mut self, name: impl Borrow<str>, mut directory: DirSingle<T>) -> Result<String, DirError>{
+impl <T> PathioHierarchy<DirectorySingle<T>> for DirectorySingle<T> {
+    fn add_directory(&mut self, name: impl Borrow<str>, mut directory: DirectorySingle<T>) -> Result<String, PathioError>{
         if !name.borrow().is_empty() {
-            if name.borrow() == "." { return Err(DirError::NameInUse("The special symbol '.' is used to refer to 'self' and is not available for use".to_owned())) }
+            if name.borrow() == "." { return Err(PathioError::NameInUse("The special symbol '.' is used to refer to 'self' and is not available for use".to_owned())) }
             if self.directory.contains_key(name.borrow()) == false {
                 directory.name = name.borrow().to_owned();
                 directory.path = if self.path.is_empty() { name.borrow().to_owned() } else { self.path.to_owned() + "/" + name.borrow() };
@@ -476,7 +504,7 @@ impl <T> DirHierarchy<DirSingle<T>> for DirSingle<T> {
                 self.directory.insert(name.borrow().to_owned(), directory);
                 Ok(name.borrow().to_owned())
             } else {
-                Err(DirError::NameInUse(name.borrow().to_owned()))
+                Err(PathioError::NameInUse(name.borrow().to_owned()))
             }
         } else {
             let mut generated_name = format!(".||#:{}", self.directory.len());
@@ -484,7 +512,7 @@ impl <T> DirHierarchy<DirSingle<T>> for DirSingle<T> {
             while self.directory.contains_key(&generated_name) == true {
                 generated_name = format!(".||#:{}", self.directory.len()+i);
                 i += 1;
-                if i > 100 { return Err(DirError::InvalidPath("Failed to generate name, max threshold reached!".to_owned())); }
+                if i > 100 { return Err(PathioError::InvalidPath("Failed to generate name, max threshold reached!".to_owned())); }
             }
             directory.name = generated_name.to_owned();
             directory.path = if self.path.is_empty() { generated_name.to_owned() } else { self.path.to_owned() + "/" + &generated_name };
@@ -494,100 +522,100 @@ impl <T> DirHierarchy<DirSingle<T>> for DirSingle<T> {
         }
     }
 
-    fn insert_dir(&mut self, path: impl Borrow<str>, directory: DirSingle<T>) -> Result<String, DirError>{
+    fn insert_directory(&mut self, path: impl Borrow<str>, directory: DirectorySingle<T>) -> Result<String, PathioError>{
         match path.borrow().rsplit_once('/'){
-            None => self.add_dir(path, directory),
-            Some ((directory_path, name)) => match self.borrow_dir_mut(directory_path) {
-                Ok(borrowed_directory) => borrowed_directory.add_dir(name, directory),
+            None => self.add_directory(path, directory),
+            Some ((directory_path, name)) => match self.borrow_directory_mut(directory_path) {
+                Ok(borrowed_directory) => borrowed_directory.add_directory(name, directory),
                 Err(e) => Err(e),
             }
         }
     }
 
-    fn create_dir(&mut self, path: impl Borrow<str>) -> Result<String, DirError>{
-        self.insert_dir(path, DirSingle::new())
+    fn create_directory(&mut self, path: impl Borrow<str>) -> Result<String, PathioError>{
+        self.insert_directory(path, DirectorySingle::new())
     }
 
-    fn take_dir(&mut self, name: impl Borrow<str>) -> Result<DirSingle<T>, DirError> {
+    fn take_directory(&mut self, name: impl Borrow<str>) -> Result<DirectorySingle<T>, PathioError> {
         match self.directory.remove(name.borrow()) {
             Some(directory) => Ok(directory),
-            None => Err(DirError::NoDir(name.borrow().to_owned())),
+            None => Err(PathioError::NoDirectory(name.borrow().to_owned())),
         }
     }
 
-    fn remove_dir(&mut self, path: impl Borrow<str>) -> Result<DirSingle<T>, DirError> {
+    fn remove_directory(&mut self, path: impl Borrow<str>) -> Result<DirectorySingle<T>, PathioError> {
         match path.borrow().split_once('/') {
-            None => self.take_dir(path),
-            Some((branch, remaining_path)) => match self.borrow_dir_mut(branch) {
-                Ok(borrowed_directory) => borrowed_directory.remove_dir(remaining_path),
+            None => self.take_directory(path),
+            Some((branch, remaining_path)) => match self.borrow_directory_mut(branch) {
+                Ok(borrowed_directory) => borrowed_directory.remove_directory(remaining_path),
                 Err(e) => Err(e),
             },
         }
     }
 
-    fn obtain_dir(&self, name: impl Borrow<str>) -> Result<&DirSingle<T>, DirError> {
+    fn obtain_directory(&self, name: impl Borrow<str>) -> Result<&DirectorySingle<T>, PathioError> {
         if !name.borrow().is_empty() {
             if name.borrow() == "." { return Ok(self) }
             match self.directory.get(name.borrow()) {
                 Some(directory) => Ok(directory),
-                None => Err(DirError::NoDir(name.borrow().to_owned())),
+                None => Err(PathioError::NoDirectory(name.borrow().to_owned())),
             }
         } else {
-            Err(DirError::InvalidPath(name.borrow().to_owned()))
+            Err(PathioError::InvalidPath(name.borrow().to_owned()))
         }
     }
 
-    fn obtain_dir_mut(&mut self, name: impl Borrow<str>) -> Result<&mut DirSingle<T>, DirError> {
+    fn obtain_directory_mut(&mut self, name: impl Borrow<str>) -> Result<&mut DirectorySingle<T>, PathioError> {
         if !name.borrow().is_empty() {
             if name.borrow() == "." { return Ok(self) }
             match self.directory.get_mut(name.borrow()) {
                 Some(directory) => Ok(directory),
-                None => Err(DirError::NoDir(name.borrow().to_owned())),
+                None => Err(PathioError::NoDirectory(name.borrow().to_owned())),
             }
         } else {
-            Err(DirError::InvalidPath(name.borrow().to_owned()))
+            Err(PathioError::InvalidPath(name.borrow().to_owned()))
         }
     }
   
-    fn borrow_dir(&self, path: impl Borrow<str>) -> Result<&DirSingle<T>, DirError> {
+    fn borrow_directory(&self, path: impl Borrow<str>) -> Result<&DirectorySingle<T>, PathioError> {
         match path.borrow().split_once('/') {
-            None => self.obtain_dir(path),
-            Some((branch, remaining_path)) => match self.obtain_dir(branch) {
-                Ok(borrowed_directory) => borrowed_directory.borrow_dir(remaining_path),
+            None => self.obtain_directory(path),
+            Some((branch, remaining_path)) => match self.obtain_directory(branch) {
+                Ok(borrowed_directory) => borrowed_directory.borrow_directory(remaining_path),
                 Err(e) => Err(e),
             },
         }
     }
 
-    fn borrow_dir_mut(&mut self, path: impl Borrow<str>) -> Result<&mut DirSingle<T>, DirError> {
+    fn borrow_directory_mut(&mut self, path: impl Borrow<str>) -> Result<&mut DirectorySingle<T>, PathioError> {
         match path.borrow().split_once('/') {
-            None => self.obtain_dir_mut(path),
-            Some((branch, remaining_path)) => match self.obtain_dir_mut(branch) {
-                Ok(borrowed_directory) => borrowed_directory.borrow_dir_mut(remaining_path),
+            None => self.obtain_directory_mut(path),
+            Some((branch, remaining_path)) => match self.obtain_directory_mut(branch) {
+                Ok(borrowed_directory) => borrowed_directory.borrow_directory_mut(remaining_path),
                 Err(e) => Err(e),
             },
         }
     }
 
-    fn merge(&mut self, directory: impl Into<DirSingle<T>>) -> Result<(), DirError> {
+    fn merge(&mut self, directory: impl Into<DirectorySingle<T>>) -> Result<(), PathioError> {
         let directory = directory.into();
 
         if let Some(_) = directory.file {
-            return Err(DirError::FileConflict);
+            return Err(PathioError::FileConflict);
         }
 
         for (name, _) in &directory.directory {
-            if self.directory.contains_key(name) {return Err(DirError::DuplicateName(name.to_owned()));}
+            if self.directory.contains_key(name) {return Err(PathioError::DuplicateName(name.to_owned()));}
         }
 
         for (name, dir) in directory.directory {
-            self.insert_dir(name, dir)?;
+            self.insert_directory(name, dir)?;
         }
 
         Ok(())
     }
 
-    fn crawl(&self) -> Vec<&DirSingle<T>> {
+    fn crawl(&self) -> Vec<&DirectorySingle<T>> {
         let mut vector = Vec::new();
         for pair in &self.directory{
             vector.push(pair.1);
@@ -627,16 +655,16 @@ impl <T> DirHierarchy<DirSingle<T>> for DirSingle<T> {
         &self.path
     }
 }
-impl <T> DirFile<T> for DirSingle<T> {
+impl <T> PathioFile<T> for DirectorySingle<T> {
     fn add_file(&mut self, file: T) -> Option<T>{
         core::mem::replace(&mut self.file, Some(file))
     }
 
-    fn insert_file(&mut self, path: impl Borrow<str>, file: T) -> Result<Option<T>, DirError>{
+    fn insert_file(&mut self, path: impl Borrow<str>, file: T) -> Result<Option<T>, PathioError>{
         if path.borrow().is_empty() {
             Ok(self.add_file(file))
         } else {
-            match self.borrow_dir_mut(path) {
+            match self.borrow_directory_mut(path) {
                 Ok(borrowed_directory) => Ok(borrowed_directory.add_file(file)),
                 Err(e) => Err(e),
             }
@@ -647,10 +675,10 @@ impl <T> DirFile<T> for DirSingle<T> {
         core::mem::replace(&mut self.file, None)
     }
 
-    fn remove_file(&mut self, path: impl Borrow<str>) -> Result<Option<T>, DirError> {
+    fn remove_file(&mut self, path: impl Borrow<str>) -> Result<Option<T>, PathioError> {
         match path.borrow().split_once('/') {
             None => Ok(self.take_file()),
-            Some((branch, remaining_path)) => match self.borrow_dir_mut(branch) {
+            Some((branch, remaining_path)) => match self.borrow_directory_mut(branch) {
                 Ok(borrowed_directory) => borrowed_directory.remove_file(remaining_path),
                 Err(e) => Err(e),
             },
@@ -671,20 +699,20 @@ impl <T> DirFile<T> for DirSingle<T> {
         }
     }
 
-    fn borrow_file(&self, path: impl Borrow<str>) -> Result<Option<&T> , DirError> {
+    fn borrow_file(&self, path: impl Borrow<str>) -> Result<Option<&T> , PathioError> {
         match path.borrow().split_once('/') {
             None => Ok(self.obtain_file()),
-            Some((branch, remaining_path)) => match self.obtain_dir(branch) {
+            Some((branch, remaining_path)) => match self.obtain_directory(branch) {
                 Ok(borrowed_directory) => borrowed_directory.borrow_file(remaining_path),
                 Err(e) => Err(e),
             },
         }
     }
     
-    fn borrow_file_mut(&mut self, path: impl Borrow<str>) -> Result<Option<&mut T> , DirError> {
+    fn borrow_file_mut(&mut self, path: impl Borrow<str>) -> Result<Option<&mut T> , PathioError> {
         match path.borrow().split_once('/') {
             None => Ok(self.obtain_file_mut()),
-            Some((branch, remaining_path)) => match self.obtain_dir_mut(branch) {
+            Some((branch, remaining_path)) => match self.obtain_directory_mut(branch) {
                 Ok(borrowed_directory) => borrowed_directory.borrow_file_mut(remaining_path),
                 Err(e) => Err(e),
             },
@@ -693,12 +721,12 @@ impl <T> DirFile<T> for DirSingle<T> {
 }
 
 #[cfg(feature = "serde")]
-impl <T:Serialize> Serialize for DirSingle<T> {
+impl <T:Serialize> Serialize for DirectorySingle<T> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
-        let mut s = serializer.serialize_struct("DirSingle", 5)?;
+        let mut s = serializer.serialize_struct("DirectorySingle", 5)?;
         s.serialize_field("name", &self.name)?;
         s.serialize_field("path", &self.path)?;
         s.serialize_field("depth", &self.depth)?;
@@ -710,11 +738,11 @@ impl <T:Serialize> Serialize for DirSingle<T> {
 
 
 
-
+/// [`DirectoryMulti`] is a special type representing directory in [`PathTreeMulti`]
 #[cfg_attr(feature = "serde", derive(Deserialize))]
 #[cfg_attr(feature = "bevy", derive(Component))]
-#[derive(Debug, Default, Clone, PartialEq)]
-pub struct DirMulti<T> {
+#[derive(Default, Clone, Debug, PartialEq)]
+pub struct DirectoryMulti<T> {
     //# SYNC =======
     name: String,
     path: String,
@@ -722,11 +750,11 @@ pub struct DirMulti<T> {
 
     //# DATA =======
     pub file: HashMap<String, T>,
-    pub directory: HashMap<String, DirMulti<T>>,
+    pub directory: HashMap<String, DirectoryMulti<T>>,
 }
-impl <T> DirMulti<T> {
-    pub fn new() -> Self {
-        DirMulti {
+impl <T> DirectoryInit for DirectoryMulti<T> {
+    fn new() -> Self {
+        DirectoryMulti {
             name: "UNASSIGNED DIRECTORY".to_owned(),
             path: "EMPTY PATH".to_owned(),
             depth: 0.0,
@@ -736,9 +764,9 @@ impl <T> DirMulti<T> {
         }
     }
 }
-impl <T> DirMulti<T> {
+impl <T> DirectoryMulti<T> {
     /// Generate overview of the inner tree and write the mapped output to the given string with data formatted to a certain level depth
-    pub(crate) fn cascade_tree(&self, mut string: String, level: u32, param: &str) -> String {
+    pub(super) fn cascade_tree(&self, mut string: String, level: u32, param: &str) -> String {
         if !param.contains("no-dir") {
             for (name, _file) in &self.file {
                 if name.starts_with('.') {continue;}
@@ -759,10 +787,10 @@ impl <T> DirMulti<T> {
         string
     }
 }
-impl <T> DirHierarchy<DirMulti<T>> for DirMulti<T> {
-    fn add_dir(&mut self, name: impl Borrow<str>, mut directory: DirMulti<T>) -> Result<String, DirError>{
+impl <T> PathioHierarchy<DirectoryMulti<T>> for DirectoryMulti<T> {
+    fn add_directory(&mut self, name: impl Borrow<str>, mut directory: DirectoryMulti<T>) -> Result<String, PathioError>{
         if !name.borrow().is_empty() {
-            if name.borrow() == "." { return Err(DirError::NameInUse("The special symbol '.' is used to refer to 'self' and is not available for use".to_owned())) }
+            if name.borrow() == "." { return Err(PathioError::NameInUse("The special symbol '.' is used to refer to 'self' and is not available for use".to_owned())) }
             if self.directory.contains_key(name.borrow()) == false {
                 directory.name = name.borrow().to_owned();
                 directory.path = if self.path.is_empty() { name.borrow().to_owned() } else { self.path.to_owned() + "/" + name.borrow() };
@@ -770,7 +798,7 @@ impl <T> DirHierarchy<DirMulti<T>> for DirMulti<T> {
                 self.directory.insert(name.borrow().to_owned(), directory);
                 Ok(name.borrow().to_owned())
             } else {
-                Err(DirError::NameInUse(name.borrow().to_owned()))
+                Err(PathioError::NameInUse(name.borrow().to_owned()))
             }
         } else {
             let mut generated_name = format!(".||#:{}", self.directory.len());
@@ -778,7 +806,7 @@ impl <T> DirHierarchy<DirMulti<T>> for DirMulti<T> {
             while self.directory.contains_key(&generated_name) == true {
                 generated_name = format!(".||#:{}", self.directory.len()+i);
                 i += 1;
-                if i > 100 { return Err(DirError::InvalidPath("Failed to generate name, max threshold reached!".to_owned())); }
+                if i > 100 { return Err(PathioError::InvalidPath("Failed to generate name, max threshold reached!".to_owned())); }
             }
             directory.name = generated_name.to_owned();
             directory.path = if self.path.is_empty() { generated_name.to_owned() } else { self.path.to_owned() + "/" + &generated_name };
@@ -788,89 +816,89 @@ impl <T> DirHierarchy<DirMulti<T>> for DirMulti<T> {
         }
     }
 
-    fn insert_dir(&mut self, path: impl Borrow<str>, directory: DirMulti<T>) -> Result<String, DirError>{
+    fn insert_directory(&mut self, path: impl Borrow<str>, directory: DirectoryMulti<T>) -> Result<String, PathioError>{
         match path.borrow().rsplit_once('/'){
-            None => self.add_dir(path, directory),
-            Some ((directory_path, name)) => match self.borrow_dir_mut(directory_path) {
-                Ok(borrowed_directory) => borrowed_directory.add_dir(name, directory),
+            None => self.add_directory(path, directory),
+            Some ((directory_path, name)) => match self.borrow_directory_mut(directory_path) {
+                Ok(borrowed_directory) => borrowed_directory.add_directory(name, directory),
                 Err(e) => Err(e),
             }
         }
     }
 
-    fn create_dir(&mut self, path: impl Borrow<str>) -> Result<String, DirError>{
-        self.insert_dir(path, DirMulti::new())
+    fn create_directory(&mut self, path: impl Borrow<str>) -> Result<String, PathioError>{
+        self.insert_directory(path, DirectoryMulti::new())
     }
 
-    fn take_dir(&mut self, name: impl Borrow<str>) -> Result<DirMulti<T>, DirError> {
+    fn take_directory(&mut self, name: impl Borrow<str>) -> Result<DirectoryMulti<T>, PathioError> {
         match self.directory.remove(name.borrow()) {
             Some(directory) => Ok(directory),
-            None => Err(DirError::NoDir(name.borrow().to_owned())),
+            None => Err(PathioError::NoDirectory(name.borrow().to_owned())),
         }
     }
 
-    fn remove_dir(&mut self, path: impl Borrow<str>) -> Result<DirMulti<T>, DirError> {
+    fn remove_directory(&mut self, path: impl Borrow<str>) -> Result<DirectoryMulti<T>, PathioError> {
         match path.borrow().split_once('/') {
-            None => self.take_dir(path),
-            Some((branch, remaining_path)) => match self.borrow_dir_mut(branch) {
-                Ok(borrowed_directory) => borrowed_directory.remove_dir(remaining_path),
+            None => self.take_directory(path),
+            Some((branch, remaining_path)) => match self.borrow_directory_mut(branch) {
+                Ok(borrowed_directory) => borrowed_directory.remove_directory(remaining_path),
                 Err(e) => Err(e),
             },
         }
     }
 
-    fn obtain_dir(&self, name: impl Borrow<str>) -> Result<&DirMulti<T>, DirError> {
+    fn obtain_directory(&self, name: impl Borrow<str>) -> Result<&DirectoryMulti<T>, PathioError> {
         if !name.borrow().is_empty() {
             if name.borrow() == "." { return Ok(self) }
             match self.directory.get(name.borrow()) {
                 Some(directory) => Ok(directory),
-                None => Err(DirError::NoDir(name.borrow().to_owned())),
+                None => Err(PathioError::NoDirectory(name.borrow().to_owned())),
             }
         } else {
-            Err(DirError::InvalidPath(name.borrow().to_owned()))
+            Err(PathioError::InvalidPath(name.borrow().to_owned()))
         }
     }
 
-    fn obtain_dir_mut(&mut self, name: impl Borrow<str>) -> Result<&mut DirMulti<T>, DirError> {
+    fn obtain_directory_mut(&mut self, name: impl Borrow<str>) -> Result<&mut DirectoryMulti<T>, PathioError> {
         if !name.borrow().is_empty() {
             if name.borrow() == "." { return Ok(self) }
             match self.directory.get_mut(name.borrow()) {
                 Some(directory) => Ok(directory),
-                None => Err(DirError::NoDir(name.borrow().to_owned())),
+                None => Err(PathioError::NoDirectory(name.borrow().to_owned())),
             }
         } else {
-            Err(DirError::InvalidPath(name.borrow().to_owned()))
+            Err(PathioError::InvalidPath(name.borrow().to_owned()))
         }
     }
   
-    fn borrow_dir(&self, path: impl Borrow<str>) -> Result<&DirMulti<T>, DirError> {
+    fn borrow_directory(&self, path: impl Borrow<str>) -> Result<&DirectoryMulti<T>, PathioError> {
         match path.borrow().split_once('/') {
-            None => self.obtain_dir(path),
-            Some((branch, remaining_path)) => match self.obtain_dir(branch) {
-                Ok(borrowed_directory) => borrowed_directory.borrow_dir(remaining_path),
+            None => self.obtain_directory(path),
+            Some((branch, remaining_path)) => match self.obtain_directory(branch) {
+                Ok(borrowed_directory) => borrowed_directory.borrow_directory(remaining_path),
                 Err(e) => Err(e),
             },
         }
     }
 
-    fn borrow_dir_mut(&mut self, path: impl Borrow<str>) -> Result<&mut DirMulti<T>, DirError> {
+    fn borrow_directory_mut(&mut self, path: impl Borrow<str>) -> Result<&mut DirectoryMulti<T>, PathioError> {
         match path.borrow().split_once('/') {
-            None => self.obtain_dir_mut(path),
-            Some((branch, remaining_path)) => match self.obtain_dir_mut(branch) {
-                Ok(borrowed_directory) => borrowed_directory.borrow_dir_mut(remaining_path),
+            None => self.obtain_directory_mut(path),
+            Some((branch, remaining_path)) => match self.obtain_directory_mut(branch) {
+                Ok(borrowed_directory) => borrowed_directory.borrow_directory_mut(remaining_path),
                 Err(e) => Err(e),
             },
         }
     }
 
-    fn merge(&mut self, directory: impl Into<DirMulti<T>>) -> Result<(), DirError> {
+    fn merge(&mut self, directory: impl Into<DirectoryMulti<T>>) -> Result<(), PathioError> {
         let directory = directory.into();
         for (name, _) in &directory.file {
-            if self.file.contains_key(name) {return Err(DirError::DuplicateName(name.to_owned()));}
+            if self.file.contains_key(name) {return Err(PathioError::DuplicateName(name.to_owned()));}
         }
 
         for (name, _) in &directory.directory {
-            if self.directory.contains_key(name) {return Err(DirError::DuplicateName(name.to_owned()));}
+            if self.directory.contains_key(name) {return Err(PathioError::DuplicateName(name.to_owned()));}
         }
 
         for (name, dir) in directory.file {
@@ -878,13 +906,13 @@ impl <T> DirHierarchy<DirMulti<T>> for DirMulti<T> {
         }
 
         for (name, dir) in directory.directory {
-            self.insert_dir(name, dir)?;
+            self.insert_directory(name, dir)?;
         }
 
         Ok(())
     }
 
-    fn crawl(&self) -> Vec<&DirMulti<T>> {
+    fn crawl(&self) -> Vec<&DirectoryMulti<T>> {
         let mut vector = Vec::new();
         for pair in &self.directory{
             vector.push(pair.1);
@@ -924,71 +952,71 @@ impl <T> DirHierarchy<DirMulti<T>> for DirMulti<T> {
         &self.path
     }
 }
-impl <T> DirFiles<T> for DirMulti<T> {
-    fn add_file(&mut self, name: impl Borrow<str>, file: T) -> Result<(), DirError>{
+impl <T> PathioFileStorage<T> for DirectoryMulti<T> {
+    fn add_file(&mut self, name: impl Borrow<str>, file: T) -> Result<(), PathioError>{
         if self.file.contains_key(name.borrow()) == false {
             self.file.insert(name.borrow().to_owned(), file);
             Ok(())
         } else {
-            Err(DirError::NameInUse(name.borrow().to_owned()))
+            Err(PathioError::NameInUse(name.borrow().to_owned()))
         }
     }
 
-    fn insert_file(&mut self, path: impl Borrow<str>, file: T) -> Result<(), DirError>{
+    fn insert_file(&mut self, path: impl Borrow<str>, file: T) -> Result<(), PathioError>{
         match path.borrow().rsplit_once('/'){
             None => self.add_file(path, file),
-            Some ((directory_path, name)) => match self.borrow_dir_mut(directory_path) {
+            Some ((directory_path, name)) => match self.borrow_directory_mut(directory_path) {
                 Ok(borrowed_directory) => borrowed_directory.add_file(name, file),
                 Err(e) => Err(e),
             }
         }
     }
 
-    fn take_file(&mut self, name: impl Borrow<str>) -> Result<T, DirError> {
+    fn take_file(&mut self, name: impl Borrow<str>) -> Result<T, PathioError> {
         match self.file.remove(name.borrow()) {
             Some(file) => Ok(file),
-            None => Err(DirError::NoFile(name.borrow().to_owned())),
+            None => Err(PathioError::NoFile(name.borrow().to_owned())),
         }
     }
 
-    fn remove_file(&mut self, path: impl Borrow<str>) -> Result<T, DirError> {
+    fn remove_file(&mut self, path: impl Borrow<str>) -> Result<T, PathioError> {
         match path.borrow().split_once('/') {
             None => self.take_file(path),
-            Some((branch, remaining_path)) => match self.borrow_dir_mut(branch) {
+            Some((branch, remaining_path)) => match self.borrow_directory_mut(branch) {
                 Ok(borrowed_directory) => borrowed_directory.remove_file(remaining_path),
                 Err(e) => Err(e),
             },
         }
     }
 
-    fn obtain_file(&self, name: impl Borrow<str>) -> Result<&T, DirError> {
+    fn obtain_file(&self, name: impl Borrow<str>) -> Result<&T, PathioError> {
         match self.file.get(name.borrow()) {
             Some(file) => Ok(file),
-            None => Err(DirError::NoFile(name.borrow().to_owned())),
+            None => Err(PathioError::NoFile(name.borrow().to_owned())),
         }
     }
     
-    fn obtain_file_mut(&mut self, name: impl Borrow<str>) -> Result<&mut T, DirError> {
+    fn obtain_file_mut(&mut self, name: impl Borrow<str>) -> Result<&mut T, PathioError> {
         match self.file.get_mut(name.borrow()) {
             Some(file) => Ok(file),
-            None => Err(DirError::NoFile(name.borrow().to_owned())),
+            None => Err(PathioError::NoFile(name.borrow().to_owned())),
         }
     }
 
-    fn borrow_file(&self, path: impl Borrow<str>) -> Result<&T, DirError> {
+    fn borrow_file(&self, path: impl Borrow<str>) -> Result<&T, PathioError> {
         match path.borrow().split_once('/') {
             None => self.obtain_file(path),
-            Some((branch, remaining_path)) => match self.obtain_dir(branch) {
+            Some((branch, remaining_path)) => match self.obtain_directory(branch) {
                 Ok(borrowed_directory) => borrowed_directory.borrow_file(remaining_path),
                 Err(e) => Err(e),
             },
         }
     }
     
-    fn borrow_file_mut(&mut self, path: impl Borrow<str>) -> Result<&mut T, DirError> {
+    fn borrow_file_mut(&mut self, path: impl Borrow<str>) -> Result<&mut T, PathioError> {
         match path.borrow().split_once('/') {
             None => self.obtain_file_mut(path),
-            Some((branch, remaining_path)) => match self.obtain_dir_mut(branch) {
+            Some((branch, remaining_path)) => match self.obtain_directory_mut(branch) {
                 Ok(borrowed_directory) => borrowed_directory.borrow_file_mut(remaining_path),
                 Err(e) => Err(e),
             },
@@ -997,12 +1025,12 @@ impl <T> DirFiles<T> for DirMulti<T> {
 }
 
 #[cfg(feature = "serde")]
-impl <T:Serialize> Serialize for DirMulti<T> {
+impl <T:Serialize> Serialize for DirectoryMulti<T> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
-        let mut s = serializer.serialize_struct("DirMulti", 5)?;
+        let mut s = serializer.serialize_struct("DirectoryMulti", 5)?;
         s.serialize_field("name", &self.name)?;
         s.serialize_field("path", &self.path)?;
         s.serialize_field("depth", &self.depth)?;
